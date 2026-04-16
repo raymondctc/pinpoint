@@ -5,9 +5,11 @@ import { MIN_ELEMENT_SIZE } from '@feedback/shared';
 interface HighlightOverlayProps {
   config: FeedbackProviderConfig;
   onElementSelect: (element: HTMLElement) => void;
+  selectedElement?: HTMLElement | null;
+  selectedRect?: DOMRect | null;
 }
 
-export function HighlightOverlay({ config, onElementSelect }: HighlightOverlayProps) {
+export function HighlightOverlay({ config, onElementSelect, selectedElement, selectedRect }: HighlightOverlayProps) {
   const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -81,15 +83,15 @@ export function HighlightOverlay({ config, onElementSelect }: HighlightOverlayPr
         zIndex: 999998,
       }}
     >
-      {highlightRect && (
+      {(selectedRect || highlightRect) && (
         <div
           style={{
             position: 'fixed',
-            top: highlightRect.top,
-            left: highlightRect.left,
-            width: highlightRect.width,
-            height: highlightRect.height,
-            border: '3px solid #3b82f6',
+            top: (selectedRect ?? highlightRect)!.top,
+            left: (selectedRect ?? highlightRect)!.left,
+            width: (selectedRect ?? highlightRect)!.width,
+            height: (selectedRect ?? highlightRect)!.height,
+            border: `3px solid ${selectedRect ? '#16a34a' : '#3b82f6'}`,
             borderRadius: '4px',
             pointerEvents: 'none',
             transition: 'all 0.1s ease-out',
@@ -102,16 +104,16 @@ export function HighlightOverlay({ config, onElementSelect }: HighlightOverlayPr
               left: 0,
               fontSize: '11px',
               fontFamily: 'monospace',
-              backgroundColor: '#3b82f6',
+              backgroundColor: selectedRect ? '#16a34a' : '#3b82f6',
               color: '#fff',
               padding: '2px 6px',
               borderRadius: '3px',
               whiteSpace: 'nowrap',
             }}
           >
-            {highlightedElement?.tagName.toLowerCase()}
-            {highlightedElement?.classList?.item(0)
-              ? `.${highlightedElement.classList.item(0)}`
+            {(selectedElement ?? highlightedElement)?.tagName.toLowerCase()}
+            {(selectedElement ?? highlightedElement)?.classList?.item(0)
+              ? `.${(selectedElement ?? highlightedElement)!.classList.item(0)}`
               : ''}
           </div>
         </div>

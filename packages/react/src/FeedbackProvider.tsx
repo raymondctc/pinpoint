@@ -46,6 +46,20 @@ export function FeedbackProvider({
     }
   }, [isActive]);
 
+  // ESC to exit feedback mode
+  useEffect(() => {
+    if (!isActive) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsActive(false);
+        setSelectedElement(null);
+        setSelectedRect(null);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isActive]);
+
   const toggle = useCallback(() => {
     setIsActive((prev) => !prev);
     setSelectedElement(null);
@@ -155,7 +169,7 @@ export function FeedbackProvider({
               </div>
             </div>
           )}
-          {!isSubmitting && <HighlightOverlay config={config} onElementSelect={handleElementSelect} />}
+          {!isSubmitting && <HighlightOverlay config={config} onElementSelect={handleElementSelect} selectedElement={selectedElement} selectedRect={selectedRect} />}
           {!isSubmitting && selectedElement && selectedRect && (
             <CommentPopover
               anchorRect={selectedRect}
