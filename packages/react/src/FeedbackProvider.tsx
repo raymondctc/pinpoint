@@ -1,5 +1,5 @@
 import { createContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import type { FeedbackProviderConfig } from '@feedback/shared';
+import type { FeedbackProviderConfig, DOMSnapshotNode } from '@feedback/shared';
 import { DEFAULT_CATEGORIES } from '@feedback/shared';
 import { HighlightOverlay } from './HighlightOverlay.js';
 import { CommentPopover } from './CommentPopover.js';
@@ -12,6 +12,12 @@ export interface FeedbackContextValue {
 }
 
 export const FeedbackContext = createContext<FeedbackContextValue | null>(null);
+
+interface CapturedData {
+  screenshot: Blob | null;
+  domSnapshot: DOMSnapshotNode;
+  element: HTMLElement;
+}
 
 interface FeedbackProviderProps {
   endpoint: string;
@@ -36,6 +42,7 @@ export function FeedbackProvider({
   const [selectedElement, setSelectedElement] = useState<HTMLElement | null>(null);
   const [selectedRect, setSelectedRect] = useState<DOMRect | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [capturedData, setCapturedData] = useState<CapturedData | null>(null);
   const dark = isDarkMode();
 
   // Set cursor to crosshair when feedback mode is active
@@ -56,6 +63,7 @@ export function FeedbackProvider({
         if (selectedElement) {
           setSelectedElement(null);
           setSelectedRect(null);
+          setCapturedData(null);
         } else {
           setIsActive(false);
         }
@@ -69,6 +77,7 @@ export function FeedbackProvider({
     setIsActive((prev) => !prev);
     setSelectedElement(null);
     setSelectedRect(null);
+    setCapturedData(null);
   }, []);
 
   const config: FeedbackProviderConfig = {
@@ -80,43 +89,47 @@ export function FeedbackProvider({
     exclude,
   };
 
-  const handleElementSelect = useCallback((element: HTMLElement) => {
+  const handleElementSelect = useCallback(async (element: HTMLElement) => {
     setSelectedElement(element);
     setSelectedRect(element.getBoundingClientRect());
+
+    // Capture screenshot and DOM snapshot immediately while the element
+    // is still in its current visual state (e.g. an open menu won't have
+    // closed yet because we haven't yielded to the browser).
+    try {
+      const { captureScreenshot } = await import('./ScreenshotCapture.js');
+      const { serializeDOM } = await import('./DOMSerializer.js');
+      const [screenshot, domSnapshot] = await Promise.all([
+        captureScreenshot(element),
+        Promise.resolve(serializeDOM(element)),
+      ]);
+      setCapturedData({ screenshot, domSnapshot, element });
+    } catch (error) {
+      console.error('[Feedback] Capture failed on selection:', error);
+      setCapturedData(null);
+    }
   }, []);
 
   const handleCancel = useCallback(() => {
     setSelectedElement(null);
     setSelectedRect(null);
+    setCapturedData(null);
   }, []);
 
   const handleSubmit = useCallback(async (comment: string, category: string) => {
-    if (!selectedElement) return;
+    if (!capturedData) return;
 
-    const element = selectedElement;
-
-    // Temporarily clear selection to hide overlay, show submitting state
-    setSelectedElement(null);
-    setSelectedRect(null);
     setIsSubmitting(true);
 
-    // Wait for repaint
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-
     try {
-      const { captureScreenshot } = await import('./ScreenshotCapture.js');
-      const { serializeDOM } = await import('./DOMSerializer.js');
       const { submitFeedback } = await import('./FeedbackSubmitter.js');
       const { validateFeedbackMetadata, validateDOMSnapshot } = await import('@feedback/shared');
-
-      const screenshot = await captureScreenshot(element);
-      const domSnapshot = serializeDOM(element);
 
       const metadata = validateFeedbackMetadata({
         projectId: config.projectId,
         comment,
         category,
-        selector: element.tagName.toLowerCase(),
+        selector: capturedData.element.tagName.toLowerCase(),
         url: window.location.href,
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
@@ -129,7 +142,7 @@ export function FeedbackProvider({
         return;
       }
 
-      const snapshotValidation = validateDOMSnapshot(domSnapshot);
+      const snapshotValidation = validateDOMSnapshot(capturedData.domSnapshot);
       if (!snapshotValidation.valid) {
         console.error('[Feedback] Invalid snapshot:', snapshotValidation.error);
         return;
@@ -138,7 +151,7 @@ export function FeedbackProvider({
       const result = await submitFeedback({
         endpoint: config.endpoint,
         metadata: metadata.data,
-        screenshot,
+        screenshot: capturedData.screenshot,
         domSnapshot: snapshotValidation.data,
       });
 
@@ -148,11 +161,14 @@ export function FeedbackProvider({
         console.error('[Feedback] Submit failed:', result.error);
       }
     } catch (error) {
-      console.error('[Feedback] Capture/submit error:', error);
+      console.error('[Feedback] Submit error:', error);
     } finally {
       setIsSubmitting(false);
+      setSelectedElement(null);
+      setSelectedRect(null);
+      setCapturedData(null);
     }
-  }, [selectedElement, config]);
+  }, [capturedData, config]);
 
   return (
     <FeedbackContext.Provider value={{ isActive, toggle, config }}>

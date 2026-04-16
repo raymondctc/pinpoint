@@ -52,20 +52,19 @@ export function HighlightOverlay({ config, onElementSelect, selectedElement, sel
       setHighlightRect(target.getBoundingClientRect());
     };
 
-    // Double-click selects the element for feedback.
-    // Single click passes through to the page so menus, links, etc. work normally.
-    const handleDblClick = (e: MouseEvent) => {
+    const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target || !isValidTarget(target)) return;
       e.preventDefault();
+      e.stopPropagation();
       onElementSelect(target);
     };
 
     document.addEventListener('mousemove', handleMouseMove, true);
-    document.addEventListener('dblclick', handleDblClick, true);
+    document.addEventListener('click', handleClick, true);
     return () => {
       document.removeEventListener('mousemove', handleMouseMove, true);
-      document.removeEventListener('dblclick', handleDblClick, true);
+      document.removeEventListener('click', handleClick, true);
     };
   }, [isValidTarget, onElementSelect, selectedElement]);
 
@@ -120,25 +119,6 @@ export function HighlightOverlay({ config, onElementSelect, selectedElement, sel
             ? `.${element.classList.item(0)}`
             : ''}
         </div>
-        {!selectedRect && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '-20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontSize: '10px',
-              fontFamily: 'system-ui, sans-serif',
-              backgroundColor: 'rgba(0,0,0,0.7)',
-              color: '#fff',
-              padding: '1px 5px',
-              borderRadius: '3px',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Double-click to select
-          </div>
-        )}
       </div>
     </div>
   );
