@@ -34,6 +34,23 @@ export function HighlightOverlay({ config, onElementSelect, selectedElement, sel
     [isExcluded],
   );
 
+  // Walk up from e.target to find the nearest valid element in the path.
+  // This avoids selecting tiny inner elements (SVG paths, spans) or giant
+  // outer containers, picking the smallest valid ancestor instead.
+  const findBestTarget = useCallback(
+    (e: MouseEvent): HTMLElement | null => {
+      const path = e.composedPath();
+      for (let i = 0; i < path.length; i++) {
+        const node = path[i];
+        if (!(node instanceof HTMLElement)) continue;
+        if (node.tagName === 'HTML' || node.tagName === 'BODY') continue;
+        if (isValidTarget(node)) return node;
+      }
+      return null;
+    },
+    [isValidTarget],
+  );
+
   useEffect(() => {
     if (selectedElement) {
       setHighlightedElement(null);
@@ -42,8 +59,8 @@ export function HighlightOverlay({ config, onElementSelect, selectedElement, sel
     }
 
     const handleMouseMove = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target || !isValidTarget(target)) {
+      const target = findBestTarget(e);
+      if (!target) {
         setHighlightedElement(null);
         setHighlightRect(null);
         return;
@@ -53,11 +70,10 @@ export function HighlightOverlay({ config, onElementSelect, selectedElement, sel
     };
 
     const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target || !isValidTarget(target)) return;
+      if (!highlightedElement) return;
       e.preventDefault();
       e.stopPropagation();
-      onElementSelect(target);
+      onElementSelect(highlightedElement);
     };
 
     document.addEventListener('mousemove', handleMouseMove, true);
@@ -66,7 +82,7 @@ export function HighlightOverlay({ config, onElementSelect, selectedElement, sel
       document.removeEventListener('mousemove', handleMouseMove, true);
       document.removeEventListener('click', handleClick, true);
     };
-  }, [isValidTarget, onElementSelect, selectedElement]);
+  }, [findBestTarget, highlightedElement, onElementSelect, selectedElement]);
 
   const rect = selectedRect ?? highlightRect;
   const element = selectedElement ?? highlightedElement;
