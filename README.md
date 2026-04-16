@@ -135,7 +135,7 @@ export async function POST(request: Request) {
 
 ## Screenshot Capture
 
-By default, the SDK uses [html2canvas](https://github.com/niklasvh/html2canvas) to capture a PNG screenshot of the highlighted element. It automatically works around html2canvas's lack of support for modern CSS color functions (`lab()`, `oklch()`, `lch()`, `oklab()`) by temporarily replacing them with safe fallback values during capture.
+The SDK uses [html2canvas-pro](https://github.com/yorickshan/html2canvas-pro) for screenshot capture, which natively supports modern CSS color functions (`lab()`, `oklch()`, `lch()`, `oklab()`) and `object-fit`. No workarounds needed.
 
 ## Monorepo Development
 

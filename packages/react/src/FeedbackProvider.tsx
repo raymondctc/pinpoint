@@ -16,7 +16,7 @@ interface FeedbackProviderProps {
   endpoint: string;
   projectId: string;
   categories?: string[];
-  captureMethod?: 'html2canvas';
+  captureMethod?: 'html2canvas' | 'native';
   theme?: 'light' | 'dark' | 'auto';
   exclude?: string[];
   children: ReactNode;

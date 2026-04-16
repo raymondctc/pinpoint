@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FeedbackProvider, useFeedback } from '../FeedbackProvider.js';
 
-vi.mock('html2canvas', () => ({
+vi.mock('html2canvas-pro', () => ({
   default: vi.fn().mockResolvedValue({
     toBlob: (cb: (blob: Blob | null) => void) => {
       cb(new Blob(['fake-png'], { type: 'image/png' }));
