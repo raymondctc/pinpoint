@@ -1,0 +1,30 @@
+name = "feedback-worker"
+main = "src/index.ts"
+compatibility_date = "2025-04-10"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "feedback-db"
+database_id = "DB"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "FEEDBACK_BUCKET"
+bucket_name = "feedback-assets"
+
+[vars]
+ALLOWED_ORIGINS = "*"
+CF_ACCESS_TEAM_DOMAIN = ""
+
+[placement]
+mode = "smart"
+
+# For production: uncomment the [assets] block to serve the dashboard SPA
+# from the worker. During local dev, the dashboard runs on its own Vite
+# dev server which proxies /api to this worker.
+#
+# [assets]
+# directory = "../dashboard/dist"
+# run_worker_first = ["/api/*"]
+# not_found_handling = "single-page-application"

@@ -8,7 +8,11 @@ A modular feedback collection SDK for React apps. Lets users highlight elements,
 |---|---|
 | [`@feedback/shared`](./packages/shared) | Types, constants, and validators — framework-agnostic |
 | [`@feedback/react`](./packages/react) | React SDK — `FeedbackProvider`, `HighlightOverlay`, `CommentPopover`, screenshot capture, DOM serialization, and submission |
+| [`@feedback/worker`](./packages/worker) | Cloudflare Worker backend — D1 + R2 + CF Access auth |
+| [`@feedback/dashboard`](./packages/dashboard) | React SPA for reviewing submitted feedback |
 | `@feedback/mock-worker` | Dev-only Cloudflare Worker that stubs the backend API |
+
+**For agent-facing integration details, see [AGENTS.md](./AGENTS.md).**
 
 ## Quick Start
 
@@ -56,6 +60,28 @@ export function App() {
 
 That's it. Clicking the button activates feedback mode — users highlight an element, leave a comment, and the SDK handles the rest.
 
+### 4. Run the backend locally
+
+```bash
+# Start the worker (port 8787)
+cd packages/worker
+wrangler d1 migrations apply feedback-db --local --config wrangler.toml  # first time only
+wrangler dev --config wrangler.toml --port 8787
+
+# Start the dashboard (port 5173, proxies /api → 8787)
+cd packages/dashboard
+pnpm dev
+```
+
+Point the SDK at the worker:
+
+```tsx
+<FeedbackProvider
+  endpoint="http://localhost:8787/api/v1/feedback"
+  projectId="your-project-slug"
+/>
+```
+
 ## API Reference
 
 ### `<FeedbackProvider>`
@@ -63,7 +89,7 @@ That's it. Clicking the button activates feedback mode — users highlight an el
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `endpoint` | `string` | — | **Required.** URL the SDK POSTs feedback to |
-| `projectId` | `string` | — | **Required.** Groups feedback by project |
+| `projectId` | `string` | — | **Required.** Project slug or ID (worker resolves slugs to IDs) |
 | `categories` | `FeedbackCategory[]` | `['bug','suggestion','question','other']` | Category picker options |
 | `captureMethod` | `'html2canvas' \| 'native'` | `'html2canvas'` | Screenshot capture method |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | UI theme |
@@ -76,7 +102,7 @@ Returns `{ isActive: boolean; toggle: () => void; config: FeedbackProviderConfig
 
 ### `data-feedback-overlay`
 
-Add this attribute to any element that should **not** be highlighted when feedback mode is active — e.g. your toggle button, toast notifications, or modals.
+Add this attribute to any element that should **not** be highlighted when feedback mode is active:
 
 ```tsx
 <button data-feedback-overlay onClick={toggle}>Feedback</button>
@@ -85,18 +111,9 @@ Add this attribute to any element that should **not** be highlighted when feedba
 ### Exports
 
 ```ts
-// Components
 import { FeedbackProvider, useFeedback } from "@feedback/react";
-import { HighlightOverlay } from "@feedback/react";
-import { CommentPopover } from "@feedback/react";
-
-// Utilities (if you want to build your own UI)
-import { captureScreenshot } from "@feedback/react";
-import { serializeDOM } from "@feedback/react";
-import { generateSelector } from "@feedback/react";
-import { submitFeedback } from "@feedback/react";
-
-// Styles
+import { HighlightOverlay, CommentPopover } from "@feedback/react";
+import { captureScreenshot, serializeDOM, generateSelector, submitFeedback } from "@feedback/react";
 import "@feedback/react/styles.css";
 ```
 
@@ -106,11 +123,13 @@ The SDK POSTs `multipart/form-data` to your `endpoint` with:
 
 | Field | Type | Description |
 |---|---|---|
-| `metadata` | `string` (JSON) | `FeedbackMetadata` object — see types |
+| `metadata` | `string` (JSON) | `FeedbackMetadata` object — see `@feedback/shared` types |
 | `screenshot` | `Blob` (PNG) | Screenshot of the selected element |
 | `dom-snapshot` | `Blob` (JSON) | Serialized DOM tree of the selected element |
 
-Your server should return `201 { id: string, status: "created" }` on success.
+Your server should return `201 { id: string }` on success.
+
+The `@feedback/worker` package provides a full Cloudflare Worker implementation. See [AGENTS.md](./AGENTS.md) for deployment and configuration details.
 
 ### Example server handler (Next.js App Router)
 
@@ -129,31 +148,21 @@ export async function POST(request: Request) {
 
   // Persist to your database / object storage here
 
-  return NextResponse.json({ id: crypto.randomUUID(), status: "created" }, { status: 201 });
+  return NextResponse.json({ id: crypto.randomUUID() }, { status: 201 });
 }
 ```
 
 ## Screenshot Capture
 
-The SDK uses [html2canvas-pro](https://github.com/yorickshan/html2canvas-pro) for screenshot capture, which natively supports modern CSS color functions (`lab()`, `oklch()`, `lch()`, `oklab()`) and `object-fit`. No workarounds needed.
+The SDK uses [html2canvas-pro](https://github.com/yorickshan/html2canvas-pro) for screenshot capture, which natively supports modern CSS color functions (`lab()`, `oklch()`, `lch()`, `oklab()`) and `object-fit`.
 
 ## Monorepo Development
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Build all packages
-pnpm build
-
-# Run tests
-pnpm test:run
-
-# Type check
-pnpm typecheck
-
-# Watch mode
-pnpm dev
+pnpm install          # Install dependencies
+pnpm build            # Build all packages
+pnpm test:run         # Run tests
+pnpm typecheck        # Type check
 ```
 
 ### Linking locally
@@ -172,20 +181,18 @@ To use `@feedback/react` in another project during development, add a `link:` de
 ## Architecture
 
 ```
-@feedback/shared          @feedback/react
-┌─────────────────┐      ┌──────────────────────────┐
-│ types.ts         │◄─────│ FeedbackProvider.tsx       │
-│ validators.ts    │      │ HighlightOverlay.tsx       │
-│ constants        │      │ CommentPopover.tsx         │
-└─────────────────┘      │ ScreenshotCapture.ts       │
-                          │ DOMSerializer.ts           │
-                          │ FeedbackSubmitter.ts       │
-                          │ selectors.ts               │
-                          │ useFeedback.ts             │
-                          └──────────────────────────┘
+@feedback/shared     @feedback/react          @feedback/worker          @feedback/dashboard
+┌─────────────┐     ┌──────────────────┐     ┌────────────────────┐   ┌─────────────────┐
+│ types.ts     │◄────│ FeedbackProvider  │     │ Hono CF Worker      │   │ React SPA        │
+│ validators   │     │ HighlightOverlay │────▶│ D1 + R2 + Auth     │◄──│ TanStack Query    │
+│ constants    │     │ CommentPopover   │     │ REST API            │   │ React Router      │
+└─────────────┘     │ ScreenshotCapture│     │ Dashboard assets     │   └─────────────────┘
+                     │ DOMSerializer    │     └────────────────────┘
+                     │ FeedbackSubmitter│
+                     └──────────────────┘
 ```
 
-**Flow:** User clicks toggle → `HighlightOverlay` lets them pick an element → `CommentPopover` collects comment + category → `captureScreenshot` + `serializeDOM` capture evidence → `submitFeedback` POSTs multipart form data to your endpoint.
+**Flow:** User clicks toggle → `HighlightOverlay` lets them pick an element → border-click selects it → `CommentPopover` collects comment + category → `captureScreenshot` + `serializeDOM` capture evidence → `submitFeedback` POSTs to endpoint → worker stores in D1 + R2 → dashboard reviews submissions.
 
 ## License
 
