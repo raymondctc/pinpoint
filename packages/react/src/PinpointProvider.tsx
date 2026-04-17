@@ -1,17 +1,17 @@
 import { createContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import type { FeedbackProviderConfig, DOMSnapshotNode } from '@feedback/shared';
-import { DEFAULT_CATEGORIES } from '@feedback/shared';
+import type { PinpointProviderConfig, DOMSnapshotNode } from '@pinpoint/shared';
+import { DEFAULT_CATEGORIES } from '@pinpoint/shared';
 import { HighlightOverlay } from './HighlightOverlay.js';
 import { CommentPopover } from './CommentPopover.js';
 import { isDarkMode } from './CommentPopover.js';
 
-export interface FeedbackContextValue {
+export interface PinpointContextValue {
   isActive: boolean;
   toggle: () => void;
-  config: FeedbackProviderConfig;
+  config: PinpointProviderConfig;
 }
 
-export const FeedbackContext = createContext<FeedbackContextValue | null>(null);
+export const PinpointContext = createContext<PinpointContextValue | null>(null);
 
 interface CapturedData {
   screenshot: Blob | null;
@@ -19,7 +19,7 @@ interface CapturedData {
   element: HTMLElement;
 }
 
-interface FeedbackProviderProps {
+interface PinpointProviderProps {
   endpoint: string;
   projectId: string;
   categories?: string[];
@@ -29,7 +29,7 @@ interface FeedbackProviderProps {
   children: ReactNode;
 }
 
-export function FeedbackProvider({
+export function PinpointProvider({
   endpoint,
   projectId,
   categories,
@@ -37,7 +37,7 @@ export function FeedbackProvider({
   theme = 'auto',
   exclude,
   children,
-}: FeedbackProviderProps) {
+}: PinpointProviderProps) {
   const [isActive, setIsActive] = useState(false);
   const [selectedElement, setSelectedElement] = useState<HTMLElement | null>(null);
   const [selectedRect, setSelectedRect] = useState<DOMRect | null>(null);
@@ -80,10 +80,10 @@ export function FeedbackProvider({
     setCapturedData(null);
   }, []);
 
-  const config: FeedbackProviderConfig = {
+  const config: PinpointProviderConfig = {
     endpoint,
     projectId,
-    categories: (categories as FeedbackProviderConfig['categories']) ?? DEFAULT_CATEGORIES,
+    categories: (categories as PinpointProviderConfig['categories']) ?? DEFAULT_CATEGORIES,
     captureMethod,
     theme,
     exclude,
@@ -105,7 +105,7 @@ export function FeedbackProvider({
       ]);
       setCapturedData({ screenshot, domSnapshot, element });
     } catch (error) {
-      console.error('[Feedback] Capture failed on selection:', error);
+      console.error('[Pinpoint] Capture failed on selection:', error);
       setCapturedData(null);
     }
   }, []);
@@ -123,7 +123,7 @@ export function FeedbackProvider({
 
     try {
       const { submitFeedback } = await import('./FeedbackSubmitter.js');
-      const { validateFeedbackMetadata, validateDOMSnapshot } = await import('@feedback/shared');
+      const { validateFeedbackMetadata, validateDOMSnapshot } = await import('@pinpoint/shared');
 
       const metadata = validateFeedbackMetadata({
         projectId: config.projectId,
@@ -138,13 +138,13 @@ export function FeedbackProvider({
       });
 
       if (!metadata.valid) {
-        console.error('[Feedback] Invalid metadata:', metadata.error);
+        console.error('[Pinpoint] Invalid metadata:', metadata.error);
         return;
       }
 
       const snapshotValidation = validateDOMSnapshot(capturedData.domSnapshot);
       if (!snapshotValidation.valid) {
-        console.error('[Feedback] Invalid snapshot:', snapshotValidation.error);
+        console.error('[Pinpoint] Invalid snapshot:', snapshotValidation.error);
         return;
       }
 
@@ -156,12 +156,12 @@ export function FeedbackProvider({
       });
 
       if (result.success) {
-        console.log('[Feedback] Submitted:', result.id);
+        console.log('[Pinpoint] Submitted:', result.id);
       } else {
-        console.error('[Feedback] Submit failed:', result.error);
+        console.error('[Pinpoint] Submit failed:', result.error);
       }
     } catch (error) {
-      console.error('[Feedback] Submit error:', error);
+      console.error('[Pinpoint] Submit error:', error);
     } finally {
       setIsSubmitting(false);
       setSelectedElement(null);
@@ -171,7 +171,7 @@ export function FeedbackProvider({
   }, [capturedData, config]);
 
   return (
-    <FeedbackContext.Provider value={{ isActive, toggle, config }}>
+    <PinpointContext.Provider value={{ isActive, toggle, config }}>
       {children}
       {isActive && (
         <>
@@ -205,8 +205,8 @@ export function FeedbackProvider({
           )}
         </>
       )}
-    </FeedbackContext.Provider>
+    </PinpointContext.Provider>
   );
 }
 
-export { useFeedback } from './useFeedback.js';
+export { usePinpoint } from './usePinpoint.js';

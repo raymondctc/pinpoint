@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router';
-import { useFeedbackItem } from '../api/hooks.js';
+import { usePinpointItem } from '../api/hooks.js';
 import { ScreenshotViewer } from '../components/ScreenshotViewer.js';
 import { DOMSnapshotRenderer } from '../components/DOMSnapshotRenderer.js';
 import { StatusActions } from '../components/StatusActions.js';
 import { StatusBadge } from '../components/StatusBadge.js';
 import { CategoryBadge } from '../components/CategoryBadge.js';
-import type { DOMSnapshotNode } from '@feedback/shared';
+import type { DOMSnapshotNode } from '@pinpoint/shared';
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString();
@@ -14,7 +14,7 @@ function formatDate(dateStr: string): string {
 
 export function FeedbackDetail() {
   const { id } = useParams<{ id: string }>();
-  const { data: item, isLoading, error } = useFeedbackItem(id ?? '');
+  const { data: item, isLoading, error } = usePinpointItem(id ?? '');
   const [domSnapshot, setDomSnapshot] = useState<DOMSnapshotNode | null>(null);
   const [domExpanded, setDomExpanded] = useState(false);
   const [domLoaded, setDomLoaded] = useState(false);

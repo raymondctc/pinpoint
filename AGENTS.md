@@ -1,11 +1,11 @@
-# @feedback — Agent Reference
+# @pinpoint — Agent Reference
 
 Agent-facing integration guide for the Feedback SDK backend. Use this file to understand how to deploy, configure, and extend the system.
 
 ## Architecture
 
 ```
-@feedback/shared          @feedback/react           @feedback/worker           @feedback/dashboard
+@pinpoint/shared          @pinpoint/react           @pinpoint/worker           @pinpoint/dashboard
 ┌─────────────────┐      ┌───────────────────┐    ┌────────────────────┐    ┌─────────────────────┐
 │ types.ts         │◄─────│ FeedbackProvider    │    │ Hono CF Worker      │    │ React SPA (Vite)   │
 │ validators.ts    │      │ HighlightOverlay   │───▶│ ├─ auth/jwt.ts      │◄───│ ├─ views/           │
@@ -17,7 +17,7 @@ Agent-facing integration guide for the Feedback SDK backend. Use this file to un
                                                     └────────────────────┘
 ```
 
-**Data flow:** User highlights element → SDK captures screenshot + DOM snapshot → POSTs multipart/form-data to worker → worker validates via `@feedback/shared`, stores screenshot/DOM in R2, inserts metadata in D1 → dashboard queries worker API.
+**Data flow:** User highlights element → SDK captures screenshot + DOM snapshot → POSTs multipart/form-data to worker → worker validates via `@pinpoint/shared`, stores screenshot/DOM in R2, inserts metadata in D1 → dashboard queries worker API.
 
 ## Deployment
 
@@ -96,13 +96,13 @@ not_found_handling = "single-page-application"
 
 ```tsx
 // 1. Install
-pnpm add @feedback/react
+pnpm add @pinpoint/react
 
 // 2. Import styles in your entry point
-import "@feedback/react/styles.css";
+import "@pinpoint/react/styles.css";
 
 // 3. Wrap your app
-import { FeedbackProvider, useFeedback } from "@feedback/react";
+import { FeedbackProvider, useFeedback } from "@pinpoint/react";
 
 function FeedbackButton() {
   const { isActive, toggle } = useFeedback();

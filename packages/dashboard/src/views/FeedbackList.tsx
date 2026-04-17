@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useFeedbackList, useUpdateFeedbackStatus, useDeleteFeedback } from '../api/hooks.js';
+import { usePinpointList, useUpdateFeedbackStatus, useDeleteFeedback } from '../api/hooks.js';
 import { getScreenshotUrl } from '../api/client.js';
 import type { FeedbackListParams } from '../api/client.js';
 import { StatusBadge } from '../components/StatusBadge.js';
@@ -44,7 +44,7 @@ export function FeedbackList() {
   const [allItems, setAllItems] = useState<{ id: string; status: string }[]>([]);
 
   const currentCursor = cursors.length > 0 ? cursors[cursors.length - 1] : undefined;
-  const { data, isLoading, error } = useFeedbackList({ ...filters, cursor: currentCursor });
+  const { data, isLoading, error } = usePinpointList({ ...filters, cursor: currentCursor });
   const updateStatus = useUpdateFeedbackStatus();
   const deleteMutation = useDeleteFeedback();
 

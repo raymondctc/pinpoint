@@ -1,4 +1,4 @@
-# @feedback
+# @pinpoint
 
 A modular feedback collection SDK for React apps. Lets users highlight elements, leave comments, and submit annotated screenshots and DOM snapshots to your server.
 
@@ -6,11 +6,11 @@ A modular feedback collection SDK for React apps. Lets users highlight elements,
 
 | Package | Description |
 |---|---|
-| [`@feedback/shared`](./packages/shared) | Types, constants, and validators — framework-agnostic |
-| [`@feedback/react`](./packages/react) | React SDK — `FeedbackProvider`, `HighlightOverlay`, `CommentPopover`, screenshot capture, DOM serialization, and submission |
-| [`@feedback/worker`](./packages/worker) | Cloudflare Worker backend — D1 + R2 + CF Access auth |
-| [`@feedback/dashboard`](./packages/dashboard) | React SPA for reviewing submitted feedback |
-| `@feedback/mock-worker` | Dev-only Cloudflare Worker that stubs the backend API |
+| [`@pinpoint/shared`](./packages/shared) | Types, constants, and validators — framework-agnostic |
+| [`@pinpoint/react`](./packages/react) | React SDK — `FeedbackProvider`, `HighlightOverlay`, `CommentPopover`, screenshot capture, DOM serialization, and submission |
+| [`@pinpoint/worker`](./packages/worker) | Cloudflare Worker backend — D1 + R2 + CF Access auth |
+| [`@pinpoint/dashboard`](./packages/dashboard) | React SPA for reviewing submitted feedback |
+| `@pinpoint/mock-worker` | Dev-only Cloudflare Worker that stubs the backend API |
 
 **For agent-facing integration details, see [AGENTS.md](./AGENTS.md).**
 
@@ -19,7 +19,7 @@ A modular feedback collection SDK for React apps. Lets users highlight elements,
 ### 1. Install
 
 ```bash
-pnpm add @feedback/react
+pnpm add @pinpoint/react
 ```
 
 ### 2. Import styles
@@ -27,13 +27,13 @@ pnpm add @feedback/react
 In your app entry point (e.g. `app/layout.tsx`, `src/main.tsx`):
 
 ```tsx
-import "@feedback/react/styles.css";
+import "@pinpoint/react/styles.css";
 ```
 
 ### 3. Wrap your app
 
 ```tsx
-import { FeedbackProvider, useFeedback } from "@feedback/react";
+import { FeedbackProvider, useFeedback } from "@pinpoint/react";
 
 function FeedbackButton() {
   const { isActive, toggle } = useFeedback();
@@ -111,10 +111,10 @@ Add this attribute to any element that should **not** be highlighted when feedba
 ### Exports
 
 ```ts
-import { FeedbackProvider, useFeedback } from "@feedback/react";
-import { HighlightOverlay, CommentPopover } from "@feedback/react";
-import { captureScreenshot, serializeDOM, generateSelector, submitFeedback } from "@feedback/react";
-import "@feedback/react/styles.css";
+import { FeedbackProvider, useFeedback } from "@pinpoint/react";
+import { HighlightOverlay, CommentPopover } from "@pinpoint/react";
+import { captureScreenshot, serializeDOM, generateSelector, submitFeedback } from "@pinpoint/react";
+import "@pinpoint/react/styles.css";
 ```
 
 ## Backend Contract
@@ -123,13 +123,13 @@ The SDK POSTs `multipart/form-data` to your `endpoint` with:
 
 | Field | Type | Description |
 |---|---|---|
-| `metadata` | `string` (JSON) | `FeedbackMetadata` object — see `@feedback/shared` types |
+| `metadata` | `string` (JSON) | `FeedbackMetadata` object — see `@pinpoint/shared` types |
 | `screenshot` | `Blob` (PNG) | Screenshot of the selected element |
 | `dom-snapshot` | `Blob` (JSON) | Serialized DOM tree of the selected element |
 
 Your server should return `201 { id: string }` on success.
 
-The `@feedback/worker` package provides a full Cloudflare Worker implementation. See [AGENTS.md](./AGENTS.md) for deployment and configuration details.
+The `@pinpoint/worker` package provides a full Cloudflare Worker implementation. See [AGENTS.md](./AGENTS.md) for deployment and configuration details.
 
 ### Example server handler (Next.js App Router)
 
@@ -167,13 +167,13 @@ pnpm typecheck        # Type check
 
 ### Linking locally
 
-To use `@feedback/react` in another project during development, add a `link:` dependency:
+To use `@pinpoint/react` in another project during development, add a `link:` dependency:
 
 ```json
 {
   "dependencies": {
-    "@feedback/react": "link:./path/to/feedback-lib/packages/react",
-    "@feedback/shared": "link:./path/to/feedback-lib/packages/shared"
+    "@pinpoint/react": "link:./path/to/pinpoint/packages/react",
+    "@pinpoint/shared": "link:./path/to/pinpoint/packages/shared"
   }
 }
 ```
@@ -181,7 +181,7 @@ To use `@feedback/react` in another project during development, add a `link:` de
 ## Architecture
 
 ```
-@feedback/shared     @feedback/react          @feedback/worker          @feedback/dashboard
+@pinpoint/shared     @pinpoint/react          @pinpoint/worker          @pinpoint/dashboard
 ┌─────────────┐     ┌──────────────────┐     ┌────────────────────┐   ┌─────────────────┐
 │ types.ts     │◄────│ FeedbackProvider  │     │ Hono CF Worker      │   │ React SPA        │
 │ validators   │     │ HighlightOverlay │────▶│ D1 + R2 + Auth     │◄──│ TanStack Query    │

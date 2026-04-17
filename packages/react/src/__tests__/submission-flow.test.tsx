@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { FeedbackProvider, useFeedback } from '../FeedbackProvider.js';
+import { PinpointProvider, usePinpoint } from '../PinpointProvider.js';
 
 vi.mock('html2canvas-pro', () => ({
   default: vi.fn().mockResolvedValue({
@@ -15,7 +15,7 @@ const mockFetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
 );
 
 function TestApp() {
-  const { isActive, toggle } = useFeedback();
+  const { isActive, toggle } = usePinpoint();
   return (
     <div>
       <button onClick={toggle} data-testid="toggle">
@@ -35,9 +35,9 @@ describe('submission flow', () => {
 
   it('activates feedback mode on toggle', async () => {
     render(
-      <FeedbackProvider endpoint="https://test.dev/api/v1/feedback" projectId="test">
+      <PinpointProvider endpoint="https://test.dev/api/v1/feedback" projectId="test">
         <TestApp />
-      </FeedbackProvider>,
+      </PinpointProvider>,
     );
 
     expect(screen.getByTestId('toggle').textContent).toBe('Inactive');

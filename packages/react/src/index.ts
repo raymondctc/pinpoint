@@ -1,4 +1,4 @@
-export { FeedbackProvider, useFeedback } from './FeedbackProvider.js';
+export { PinpointProvider, usePinpoint } from './PinpointProvider.js';
 export { HighlightOverlay } from './HighlightOverlay.js';
 export { CommentPopover } from './CommentPopover.js';
 export { generateSelector } from './selectors.js';

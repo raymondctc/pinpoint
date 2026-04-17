@@ -6,7 +6,7 @@ import {
   DEFAULT_CATEGORIES,
   COMPUTED_STYLES_WHITELIST,
   MAX_COMMENT_LENGTH,
-} from '@feedback/shared';
+} from '@pinpoint/shared';
 
 describe('package integration', () => {
   it('shared validators work with react types', () => {

@@ -1,11 +1,11 @@
 import { useEffect, useCallback, useState } from 'react';
-import type { FeedbackProviderConfig } from '@feedback/shared';
-import { MIN_ELEMENT_SIZE } from '@feedback/shared';
+import type { PinpointProviderConfig } from '@pinpoint/shared';
+import { MIN_ELEMENT_SIZE } from '@pinpoint/shared';
 
 const BORDER_HIT_WIDTH = 8; // px from edge that counts as a "border click"
 
 interface HighlightOverlayProps {
-  config: FeedbackProviderConfig;
+  config: PinpointProviderConfig;
   onElementSelect: (element: HTMLElement) => void;
   selectedElement?: HTMLElement | null;
   selectedRect?: DOMRect | null;
@@ -122,7 +122,7 @@ export function HighlightOverlay({ config, onElementSelect, selectedElement, sel
   return (
     <div
       data-feedback-overlay=""
-      data-testid="feedback-overlay"
+      data-testid="pinpoint-overlay"
       style={{
         position: 'fixed',
         top: 0,

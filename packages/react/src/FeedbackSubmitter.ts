@@ -1,4 +1,4 @@
-import type { FeedbackMetadata, DOMSnapshotNode } from '@feedback/shared';
+import type { FeedbackMetadata, DOMSnapshotNode } from '@pinpoint/shared';
 
 interface SubmitFeedbackParams {
   endpoint: string;

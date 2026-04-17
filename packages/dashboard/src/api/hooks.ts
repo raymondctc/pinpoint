@@ -9,14 +9,14 @@ import {
   type FeedbackListParams,
 } from './client.js';
 
-export function useFeedbackList(params: FeedbackListParams = {}) {
+export function usePinpointList(params: FeedbackListParams = {}) {
   return useQuery({
     queryKey: ['feedback', 'list', params],
     queryFn: () => fetchFeedbackList(params),
   });
 }
 
-export function useFeedbackItem(id: string) {
+export function usePinpointItem(id: string) {
   return useQuery({
     queryKey: ['feedback', 'detail', id],
     queryFn: () => fetchFeedbackItem(id),

@@ -57,7 +57,7 @@ app.post('/api/v1/feedback', async (c) => {
 
   feedbackStore.set(id, entry);
 
-  console.log('[MockWorker] Feedback received:', {
+  console.log('[Pinpoint MockWorker] received:', {
     id,
     comment: (parsed.comment as string)?.slice(0, 80),
     screenshotSize: formData.get('screenshot') instanceof Blob ? (formData.get('screenshot') as Blob).size : 0,

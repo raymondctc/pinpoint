@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { DOMSnapshotNode } from '@feedback/shared';
+import type { DOMSnapshotNode } from '@pinpoint/shared';
 
 interface DOMSnapshotRendererProps {
   node: DOMSnapshotNode | null;

@@ -56,7 +56,7 @@ export interface DOMSnapshotNode {
 
 // --- Provider Config ---
 
-export interface FeedbackProviderConfig {
+export interface PinpointProviderConfig {
   endpoint: string;
   projectId: string;
   categories?: FeedbackCategory[];

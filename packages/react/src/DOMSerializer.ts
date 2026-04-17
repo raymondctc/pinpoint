@@ -1,5 +1,5 @@
-import type { DOMSnapshotNode } from '@feedback/shared';
-import { COMPUTED_STYLES_WHITELIST, MAX_DOM_DEPTH, MAX_SNAPSHOT_SIZE } from '@feedback/shared';
+import type { DOMSnapshotNode } from '@pinpoint/shared';
+import { COMPUTED_STYLES_WHITELIST, MAX_DOM_DEPTH, MAX_SNAPSHOT_SIZE } from '@pinpoint/shared';
 
 const MAX_TEXT_LENGTH_AT_DEPTH = 200;
 

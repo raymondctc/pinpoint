@@ -4,7 +4,7 @@ import type { Bindings, Variables } from '../index.js';
 import { createFeedback, listFeedback, getFeedbackById, updateFeedbackStatus, softDeleteFeedback } from '../db/feedback-repo.js';
 import { getProjectBySlug } from '../db/projects-repo.js';
 import { storeScreenshot, storeDOMSnapshot, getScreenshot, getDOMSnapshot } from '../storage/r2.js';
-import { validateFeedbackMetadata, validateDOMSnapshot } from '@feedback/shared';
+import { validateFeedbackMetadata, validateDOMSnapshot } from '@pinpoint/shared';
 
 type AppEnv = { Bindings: Bindings; Variables: Variables };
 
@@ -98,7 +98,7 @@ feedback.post('/', async (c) => {
 
     return c.json({ id: row.id }, 201);
   } catch (error) {
-    console.error('[Feedback] Submit error:', error instanceof Error ? error.message : String(error));
+    console.error('[Pinpoint] Submit error:', error instanceof Error ? error.message : String(error));
     return c.json({ error: 'Internal server error' }, 500);
   }
 });

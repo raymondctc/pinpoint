@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { submitFeedback } from '../FeedbackSubmitter.js';
-import type { FeedbackMetadata, DOMSnapshotNode } from '@feedback/shared';
+import type { FeedbackMetadata, DOMSnapshotNode } from '@pinpoint/shared';
 
 describe('submitFeedback', () => {
   const mockEndpoint = 'https://feedback.test.workers.dev/api/v1/feedback';

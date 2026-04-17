@@ -1,5 +1,5 @@
 {
-  "name": "@feedback/react",
+  "name": "@pinpoint/react",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@feedback/shared": "workspace:*",
+    "@pinpoint/shared": "workspace:*",
     "html2canvas-pro": "^2.0.2"
   },
   "devDependencies": {

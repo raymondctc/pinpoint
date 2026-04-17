@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { serializeDOM } from '../DOMSerializer.js';
-import { COMPUTED_STYLES_WHITELIST, MAX_DOM_DEPTH } from '@feedback/shared';
+import { COMPUTED_STYLES_WHITELIST, MAX_DOM_DEPTH } from '@pinpoint/shared';
 
 describe('serializeDOM', () => {
   let container: HTMLElement;

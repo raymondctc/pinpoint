@@ -19,7 +19,7 @@ export async function captureScreenshot(
       );
     });
   } catch (error) {
-    console.error('[Feedback] Screenshot capture failed:', error);
+    console.error('[Pinpoint] Screenshot capture failed:', error);
     return null;
   }
 }

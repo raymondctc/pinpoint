@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { HighlightOverlay } from '../HighlightOverlay.js';
-import type { FeedbackProviderConfig } from '@feedback/shared';
+import type { PinpointProviderConfig } from '@pinpoint/shared';
 
-const defaultConfig: FeedbackProviderConfig = {
+const defaultConfig: PinpointProviderConfig = {
   endpoint: 'https://test.dev/api/v1/feedback',
   projectId: 'test',
   categories: ['bug', 'suggestion', 'question', 'other'],
@@ -27,7 +27,7 @@ describe('HighlightOverlay', () => {
       />,
     );
 
-    const overlay = screen.getByTestId('feedback-overlay');
+    const overlay = screen.getByTestId('pinpoint-overlay');
     expect(overlay).toBeDefined();
     expect(overlay.textContent).toContain('div.my-class');
   });
@@ -40,7 +40,7 @@ describe('HighlightOverlay', () => {
       />,
     );
 
-    expect(screen.queryByTestId('feedback-overlay')).toBeNull();
+    expect(screen.queryByTestId('pinpoint-overlay')).toBeNull();
   });
 
   it('does not show Select button when element is selected', () => {
@@ -72,7 +72,7 @@ describe('HighlightOverlay', () => {
       />,
     );
 
-    const overlay = screen.getByTestId('feedback-overlay');
+    const overlay = screen.getByTestId('pinpoint-overlay');
     expect(overlay.textContent).toContain('span');
     // Selected state should use green border
     expect(overlay.innerHTML).toContain('rgb(22, 163, 74)');
