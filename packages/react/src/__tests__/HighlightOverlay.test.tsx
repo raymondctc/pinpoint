@@ -29,7 +29,6 @@ describe('HighlightOverlay', () => {
 
     const overlay = screen.getByTestId('feedback-overlay');
     expect(overlay).toBeDefined();
-    // Shows tag name and class
     expect(overlay.textContent).toContain('div.my-class');
   });
 
@@ -44,7 +43,23 @@ describe('HighlightOverlay', () => {
     expect(screen.queryByTestId('feedback-overlay')).toBeNull();
   });
 
-  it('shows green border when element is selected', () => {
+  it('does not show Select button when element is selected', () => {
+    const element = document.createElement('div');
+    const rect = new DOMRect(10, 20, 200, 100);
+
+    render(
+      <HighlightOverlay
+        config={defaultConfig}
+        onElementSelect={vi.fn()}
+        selectedElement={element}
+        selectedRect={rect}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Select' })).toBeNull();
+  });
+
+  it('shows green border for selected elements', () => {
     const element = document.createElement('span');
     const rect = new DOMRect(50, 60, 300, 150);
 
@@ -58,9 +73,8 @@ describe('HighlightOverlay', () => {
     );
 
     const overlay = screen.getByTestId('feedback-overlay');
-    // Selected state should not show "Double-click to select" hint
-    expect(overlay.textContent).not.toContain('Double-click to select');
-    // Shows element tag
     expect(overlay.textContent).toContain('span');
+    // Selected state should use green border
+    expect(overlay.innerHTML).toContain('rgb(22, 163, 74)');
   });
 });

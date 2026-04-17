@@ -69,25 +69,39 @@ export function HighlightOverlay({ config, onElementSelect, selectedElement, sel
       setHighlightRect(target.getBoundingClientRect());
     };
 
-    const handleClick = (e: MouseEvent) => {
-      if (!highlightedElement) return;
-      e.preventDefault();
-      e.stopPropagation();
-      onElementSelect(highlightedElement);
-    };
-
     document.addEventListener('mousemove', handleMouseMove, true);
-    document.addEventListener('click', handleClick, true);
     return () => {
       document.removeEventListener('mousemove', handleMouseMove, true);
-      document.removeEventListener('click', handleClick, true);
     };
-  }, [findBestTarget, highlightedElement, onElementSelect, selectedElement]);
+  }, [findBestTarget, selectedElement]);
+
+  // Enter key confirms selection of the highlighted element
+  useEffect(() => {
+    if (selectedElement || !highlightedElement) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onElementSelect(highlightedElement);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [highlightedElement, onElementSelect, selectedElement]);
+
+  const handleSelect = useCallback(() => {
+    if (highlightedElement) {
+      onElementSelect(highlightedElement);
+    }
+  }, [highlightedElement, onElementSelect]);
 
   const rect = selectedRect ?? highlightRect;
   const element = selectedElement ?? highlightedElement;
 
   if (!rect || !element) return null;
+
+  // Position the Select button: prefer top-right of the element, fall back if clipped
+  const selectBtnTop = Math.max(4, rect.top - 28);
+  const selectBtnLeft = rect.right - 70;
 
   return (
     <div
@@ -136,6 +150,32 @@ export function HighlightOverlay({ config, onElementSelect, selectedElement, sel
             : ''}
         </div>
       </div>
+      {/* Select button — only shown when hovering (not when element is already selected) */}
+      {!selectedRect && (
+        <button
+          data-feedback-overlay=""
+          onClick={handleSelect}
+          style={{
+            position: 'fixed',
+            top: selectBtnTop,
+            left: selectBtnLeft,
+            pointerEvents: 'auto',
+            padding: '4px 12px',
+            fontSize: '12px',
+            fontFamily: 'system-ui, sans-serif',
+            fontWeight: 600,
+            color: '#fff',
+            backgroundColor: '#3b82f6',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            zIndex: 999999,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+          }}
+        >
+          Select
+        </button>
+      )}
     </div>
   );
 }
