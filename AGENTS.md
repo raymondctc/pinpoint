@@ -227,6 +227,197 @@ Returns `409` if slug already exists.
 - `feedback/{id}/screenshot.png` — PNG image
 - `feedback/{id}/dom-snapshot.json` — serialized DOM tree
 
+## Backend Integration Patterns
+
+The SDK sends `multipart/form-data` to any HTTP endpoint that implements the contract below. While `@pinpoint/worker` provides a ready-made Cloudflare Worker implementation, you can integrate Pinpoint's backend into any server framework.
+
+### SDK Contract
+
+The SDK POSTs `multipart/form-data` with three fields:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `metadata` | string (JSON) | Yes | `FeedbackMetadata` object — see `@pinpoint/shared` types |
+| `screenshot` | Blob (PNG) | No | Screenshot captured by SDK |
+| `dom-snapshot` | Blob (JSON) | No | Serialized DOM tree |
+
+Your server should return `201 { id: string }` on success.
+
+For binary retrieval, implement GET endpoints that stream assets from object storage:
+
+- `GET /feedback/:id/screenshot` → PNG image
+- `GET /feedback/:id/dom-snapshot` → JSON document
+
+### Pattern A: Standalone Pinpoint Worker
+
+Deploy `@pinpoint/worker` as a standalone Cloudflare Worker. This is the default approach documented in the Deployment section above. Best for greenfield projects or when you want Pinpoint completely self-contained.
+
+```
+Frontend SDK → Pinpoint Worker (Hono) → D1 + R2
+Dashboard  → Pinpoint Worker (Hono) → D1 + R2
+```
+
+### Pattern B: Embedded in Existing API
+
+Add Pinpoint's REST and admin routes to an existing API server. This is the recommended pattern when you already have a Cloudflare Worker (or any server) with its own D1 database and R2 buckets.
+
+**Why embedded?**
+- Single deployment / single D1 database / single set of wrangler env vars
+- Admin page uses your existing auth (tRPC admin routes, session middleware)
+- No separate worker to maintain
+
+**Architecture:**
+
+```
+Frontend SDK → Your API (REST routes)  → D1 + R2
+Admin App    → Your API (tRPC routes)   → D1 + R2
+              ↓
+         @pinpoint/shared (validators, types)
+```
+
+**Required REST routes** (the SDK can't use tRPC/GraphQL because it sends multipart/form-data):
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/feedback` | No | Submit feedback (multipart/form-data) |
+| `GET` | `/api/v1/feedback/:id/screenshot` | No | Stream screenshot PNG from R2/S3 |
+| `GET` | `/api/v1/feedback/:id/dom-snapshot` | No | Stream DOM snapshot JSON from R2/S3 |
+| `GET` | `/api/v1/projects` | No | List projects |
+| `POST` | `/api/v1/projects` | Optional | Create project |
+
+**Admin query/mutation routes** (use your existing pattern — tRPC, GraphQL, REST, etc.):
+
+| Route | Type | Description |
+|---|---|---|
+| `admin.pinpoint.list` | Query | Paginated feedback list with filters (projectId, status, category, offset/limit) |
+| `admin.pinpoint.getById` | Query | Single feedback item with screenshotUrl/domSnapshotUrl |
+| `admin.pinpoint.updateStatus` | Mutation | Resolve or dismiss feedback |
+| `admin.pinpoint.delete` | Mutation | Soft-delete feedback |
+| `admin.pinpoint.listProjects` | Query | List projects for filter dropdown |
+| `admin.pinpoint.createProject` | Mutation | Create project |
+
+**CORS:** The REST routes must include CORS headers since SDK submissions come from different origins. Match your existing API CORS policy or use `Access-Control-Allow-Origin: *` for development.
+
+**Implementing the POST handler:**
+
+1. Parse `multipart/form-data`
+2. Validate `metadata` with `validateFeedbackMetadata` from `@pinpoint/shared`
+3. (Optional) Validate `dom-snapshot` with `validateDOMSnapshot` from `@pinpoint/shared`
+4. Resolve `projectId` — if it's a slug, look up the project table to get the nanoid ID. Auto-create the project if the slug doesn't exist yet
+5. Generate ID, store screenshot + DOM snapshot in R2/S3, insert feedback row in D1/SQL
+6. Return `201 { id }`
+
+**Implementing the admin list endpoint:**
+
+Return offset-based pagination (matching your admin UI pattern) with this shape:
+```ts
+{ items: FeedbackItem[], total: number, page: number, totalPage: number }
+```
+
+Each `FeedbackItem` should include a `screenshotUrl` field — either a full URL or a path that the admin app can prepend with the API base URL.
+
+### Pattern C: Custom Server
+
+Any HTTP server that implements the SDK contract can work. The key requirements:
+
+1. Accept `multipart/form-data` POST at your configured endpoint
+2. Validate metadata with `@pinpoint/shared` validators
+3. Store binary assets (screenshot, DOM snapshot) in object storage
+4. Store metadata in a database following the schema below
+5. Provide GET endpoints for binary asset retrieval
+6. Provide admin endpoints for listing, viewing, and managing feedback
+
+### Database Schema
+
+The schema is database-agnostic. Implement it in whatever ORM your project uses. The logical model:
+
+**`projects` table:**
+- `id` (primary key, string) — nanoid or UUID
+- `name` (not null, string)
+- `slug` (unique, not null, string) — human-readable identifier, also accepted as `projectId` in feedback submission
+- `created_at` (not null, timestamp)
+
+**`feedback` table:**
+- `id` (primary key, string) — nanoid or UUID
+- `project_id` (foreign key → projects.id, not null)
+- `status` (not null, default 'open') — one of: `open`, `resolved`, `dismissed`, `deleted`
+- `category` (nullable) — one of: `bug`, `suggestion`, `question`, `other`
+- `comment` (not null, string, max 2000 chars)
+- `selector` (nullable, string) — CSS selector of highlighted element
+- `url` (nullable, string) — page URL
+- `viewport_width` (nullable, integer)
+- `viewport_height` (nullable, integer)
+- `user_agent` (nullable, string)
+- `created_by` (default 'anonymous', string) — email from auth or 'anonymous'
+- `capture_method` (default 'html2canvas', string) — `html2canvas` or `native`
+- `created_at` (not null, timestamp)
+- `updated_at` (not null, timestamp)
+- `deleted_at` (nullable, timestamp) — set when soft-deleted
+
+**Indexes:** `project_id`, `status`, `created_at`, `(project_id, status)`
+
+**Drizzle ORM example** (for projects using Drizzle with SQLite/D1):
+
+```ts
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+
+export const pinpointProjects = sqliteTable('pinpoint_projects', {
+  id: text().primaryKey().$default(() => randomUUID()),
+  name: text().notNull(),
+  slug: text().notNull().unique(),
+  createdAt: text('created_at').notNull().$default(() => new Date().toISOString()),
+});
+
+export const pinpointFeedback = sqliteTable('pinpoint_feedback', {
+  id: text().primaryKey().$default(() => randomUUID()),
+  projectId: text('project_id').notNull(),
+  status: text().notNull().default('open'),
+  category: text(),
+  comment: text().notNull(),
+  selector: text(),
+  url: text(),
+  viewportWidth: integer('viewport_width'),
+  viewportHeight: integer('viewport_height'),
+  userAgent: text('user_agent'),
+  createdBy: text('created_by').default('anonymous'),
+  captureMethod: text('capture_method').default('html2canvas'),
+  createdAt: text('created_at').notNull().$default(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$default(() => new Date().toISOString()),
+  deletedAt: text('deleted_at'),
+}, (table) => [
+  index('idx_pinpoint_feedback_project_id').on(table.projectId),
+  index('idx_pinpoint_feedback_status').on(table.status),
+  index('idx_pinpoint_feedback_created_at').on(table.createdAt),
+  index('idx_pinpoint_feedback_project_status').on(table.projectId, table.status),
+]);
+```
+
+### Object Storage Keys
+
+Regardless of backend, use this key layout in R2/S3:
+
+- `feedback/{id}/screenshot.png` — PNG image
+- `feedback/{id}/dom-snapshot.json` — JSON document
+
+### Input Validation
+
+Use `@pinpoint/shared` validators regardless of your backend framework:
+
+```ts
+import { validateFeedbackMetadata, validateDOMSnapshot } from '@pinpoint/shared';
+
+// In your POST /feedback handler:
+const metadataValidation = validateFeedbackMetadata(metadataObj);
+if (!metadataValidation.valid) {
+  return { status: 400, body: { error: metadataValidation.error } };
+}
+
+const snapshotValidation = validateDOMSnapshot(domSnapshotObj);
+if (!snapshotValidation.valid) {
+  return { status: 400, body: { error: snapshotValidation.error } };
+}
+```
+
 ## Extending the System
 
 ### Adding a new feedback field
@@ -241,12 +432,21 @@ Returns `409` if slug already exists.
 
 ### Adding a new API endpoint
 
+**For the standalone worker:**
+
 1. Create route handler in `packages/worker/src/routes/`
 2. Mount in `packages/worker/src/index.ts`
 3. Add tests in `packages/worker/src/routes/__tests__/`
 4. Update mock worker (`packages/mock-worker/src/routes.ts`) to stub the endpoint
 5. Add client method in `packages/dashboard/src/api/client.ts`
 6. Add TanStack Query hook in `packages/dashboard/src/api/hooks.ts`
+
+**For embedded backends:**
+
+1. Add the new field/column to your schema and database (follow the Drizzle ORM example above or use raw SQL)
+2. Update the REST route handler if the SDK contract changes
+3. Add admin tRPC/GraphQL/REST routes for the admin viewer
+4. Update `@pinpoint/shared` types if the SDK metadata format changes
 
 ### Changing auth requirements
 

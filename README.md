@@ -158,6 +158,18 @@ export async function POST(request: Request) {
 }
 ```
 
+## Backend Integration
+
+The Pinpoint SDK works with any HTTP backend that accepts `multipart/form-data` POST requests. While `@pinpoint/worker` provides a ready-made Cloudflare Worker (Hono), you can also embed Pinpoint into existing APIs — including tRPC, itty-router, or any other framework.
+
+Key points for embedded integration:
+- The SDK POST endpoint must accept multipart/form-data (tRPC can't handle this — use REST routes alongside your existing API)
+- Admin queries/mutations can use your existing pattern (tRPC, GraphQL, REST)
+- Use `@pinpoint/shared` validators for input validation regardless of framework
+- Follow the same database schema and R2/S3 key layout
+
+See [AGENTS.md](./AGENTS.md#backend-integration-patterns) for detailed integration patterns, schema examples (including Drizzle ORM), and architecture diagrams.
+
 ## Screenshot Capture
 
 The SDK uses [html2canvas-pro](https://github.com/yorickshan/html2canvas-pro) for screenshot capture, which natively supports modern CSS color functions (`lab()`, `oklch()`, `lch()`, `oklab()`) and `object-fit`.
