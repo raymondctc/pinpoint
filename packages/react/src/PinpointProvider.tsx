@@ -96,6 +96,9 @@ export function PinpointProvider({
     // Capture screenshot and DOM snapshot immediately while the element
     // is still in its current visual state (e.g. an open menu won't have
     // closed yet because we haven't yielded to the browser).
+    // Note: screenshot captures the full page (document.body) so that
+    // dark/light theme backgrounds are preserved, while the DOM snapshot
+    // still targets the clicked element so the dashboard can highlight it.
     try {
       const { captureScreenshot } = await import('./ScreenshotCapture.js');
       const { serializeDOM } = await import('./DOMSerializer.js');

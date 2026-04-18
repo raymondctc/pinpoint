@@ -36,16 +36,46 @@ describe('captureScreenshot', () => {
     element.remove();
   });
 
-  it('passes useCORS and backgroundColor options to html2canvas-pro', async () => {
+  it('captures document.body instead of the clicked element', async () => {
     const { default: html2canvas } = await import('html2canvas-pro');
     const element = document.createElement('div');
     document.body.appendChild(element);
 
     await captureScreenshot(element);
 
-    expect(html2canvas).toHaveBeenCalledWith(element, expect.objectContaining({
+    // Should be called with document.body, not the passed element
+    expect(html2canvas).toHaveBeenCalledWith(document.body, expect.objectContaining({
       useCORS: true,
-      backgroundColor: null,
+    }));
+
+    element.remove();
+  });
+
+  it('uses resolved page background instead of null', async () => {
+    const { default: html2canvas } = await import('html2canvas-pro');
+    const element = document.createElement('div');
+    document.body.appendChild(element);
+
+    await captureScreenshot(element);
+
+    // backgroundColor should be a computed value (string) or undefined, never null
+    const callArgs = (html2canvas as any).mock.calls.at(-1);
+    const options = callArgs[1];
+    expect(options.backgroundColor).not.toBe(null);
+
+    element.remove();
+  });
+
+  it('includes windowWidth and windowHeight for full-page capture', async () => {
+    const { default: html2canvas } = await import('html2canvas-pro');
+    const element = document.createElement('div');
+    document.body.appendChild(element);
+
+    await captureScreenshot(element);
+
+    expect(html2canvas).toHaveBeenCalledWith(document.body, expect.objectContaining({
+      windowWidth: expect.any(Number),
+      windowHeight: expect.any(Number),
     }));
 
     element.remove();
