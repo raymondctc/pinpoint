@@ -118,7 +118,7 @@ export function App() {
     <PinpointProvider
       endpoint="https://your-worker.workers.dev/api/v1/feedback"
       projectId="your-project-slug-or-id"
-      captureMethod="html2canvas"   // or "native"
+      captureMethod="dom"          // or "native"
       theme="auto"                   // "light" | "dark" | "auto"
     >
       <YourApp />
@@ -215,7 +215,7 @@ Returns `409` if slug already exists.
 | `viewport_height` | INTEGER | |
 | `user_agent` | TEXT | |
 | `created_by` | TEXT | Email from CF Access JWT, or `anonymous` |
-| `capture_method` | TEXT | `html2canvas` or `native` |
+| `capture_method` | TEXT | `dom` or `native` |
 | `created_at` | TEXT | Auto-generated |
 | `updated_at` | TEXT | Auto-updated on status change |
 | `deleted_at` | TEXT | Set when soft-deleted |
@@ -349,7 +349,7 @@ The schema is database-agnostic. Implement it in whatever ORM your project uses.
 - `viewport_height` (nullable, integer)
 - `user_agent` (nullable, string)
 - `created_by` (default 'anonymous', string) — email from auth or 'anonymous'
-- `capture_method` (default 'html2canvas', string) — `html2canvas` or `native`
+- `capture_method` (default 'dom', string) — `dom` or `native`
 - `created_at` (not null, timestamp)
 - `updated_at` (not null, timestamp)
 - `deleted_at` (nullable, timestamp) — set when soft-deleted
@@ -380,7 +380,7 @@ export const pinpointFeedback = sqliteTable('pinpoint_feedback', {
   viewportHeight: integer('viewport_height'),
   userAgent: text('user_agent'),
   createdBy: text('created_by').default('anonymous'),
-  captureMethod: text('capture_method').default('html2canvas'),
+  captureMethod: text('capture_method').default('dom'),
   createdAt: text('created_at').notNull().$default(() => new Date().toISOString()),
   updatedAt: text('updated_at').notNull().$default(() => new Date().toISOString()),
   deletedAt: text('deleted_at'),

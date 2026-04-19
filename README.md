@@ -91,7 +91,7 @@ Point the SDK at the worker:
 | `endpoint` | `string` | — | **Required.** URL the SDK POSTs feedback to |
 | `projectId` | `string` | — | **Required.** Project slug or ID (worker resolves slugs to IDs) |
 | `categories` | `FeedbackCategory[]` | `['bug','suggestion','question','other']` | Category picker options |
-| `captureMethod` | `'html2canvas' \| 'native'` | `'html2canvas'` | Screenshot capture method |
+| `captureMethod` | `'dom' \| 'native'` | `'dom'` | Screenshot capture method |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | UI theme |
 | `exclude` | `string[]` | `[]` | CSS selectors excluded from highlighting |
 | `children` | `ReactNode` | — | App content |
@@ -172,7 +172,7 @@ See [AGENTS.md](./AGENTS.md#backend-integration-patterns) for detailed integrati
 
 ## Screenshot Capture
 
-The SDK uses [html2canvas-pro](https://github.com/yorickshan/html2canvas-pro) for screenshot capture, which natively supports modern CSS color functions (`lab()`, `oklch()`, `lch()`, `oklab()`) and `object-fit`.
+The SDK uses [modern-screenshot](https://github.com/qq15725/modern-screenshot) for screenshot capture (the `dom` method). It renders DOM nodes via SVG foreignObject and produces a PNG blob. The library is lightweight (~35KB min) and supports filtering nodes, custom backgrounds, and DPI scaling.
 
 ## Monorepo Development
 
