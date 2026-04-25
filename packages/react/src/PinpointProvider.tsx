@@ -61,6 +61,10 @@ export function PinpointProvider({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (selectedElement) {
+          // Stop propagation so Radix/dialog ESC handlers don't also close the underlying dropdown.
+          // Must be on window (not document) so we run before document-level capture handlers
+          // that Radix registers first (React effects run children-before-parents).
+          e.stopPropagation();
           setSelectedElement(null);
           setSelectedRect(null);
           setCapturedData(null);
@@ -69,8 +73,8 @@ export function PinpointProvider({
         }
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [isActive, selectedElement]);
 
   const toggle = useCallback(() => {
@@ -116,59 +120,62 @@ export function PinpointProvider({
     setCapturedData(null);
   }, []);
 
-  const handleSubmit = useCallback(async (comment: string, category: string) => {
-    if (!capturedData) return;
+  const handleSubmit = useCallback(
+    async (comment: string, category: string) => {
+      if (!capturedData) return;
 
-    setIsSubmitting(true);
+      setIsSubmitting(true);
 
-    try {
-      const { submitFeedback } = await import('./FeedbackSubmitter.js');
-      const { validateFeedbackMetadata, validateDOMSnapshot } = await import('@pinpoint/shared');
+      try {
+        const { submitFeedback } = await import('./FeedbackSubmitter.js');
+        const { validateFeedbackMetadata, validateDOMSnapshot } = await import('@pinpoint/shared');
 
-      const metadata = validateFeedbackMetadata({
-        projectId: config.projectId,
-        comment,
-        category,
-        selector: capturedData.element.tagName.toLowerCase(),
-        url: window.location.href,
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-        userAgent: navigator.userAgent,
-        captureMethod: config.captureMethod ?? 'dom',
-      });
+        const metadata = validateFeedbackMetadata({
+          projectId: config.projectId,
+          comment,
+          category,
+          selector: capturedData.element.tagName.toLowerCase(),
+          url: window.location.href,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          userAgent: navigator.userAgent,
+          captureMethod: config.captureMethod ?? 'dom',
+        });
 
-      if (!metadata.valid) {
-        console.error('[Pinpoint] Invalid metadata:', metadata.error);
-        return;
+        if (!metadata.valid) {
+          console.error('[Pinpoint] Invalid metadata:', metadata.error);
+          return;
+        }
+
+        const snapshotValidation = validateDOMSnapshot(capturedData.domSnapshot);
+        if (!snapshotValidation.valid) {
+          console.error('[Pinpoint] Invalid snapshot:', snapshotValidation.error);
+          return;
+        }
+
+        const result = await submitFeedback({
+          endpoint: config.endpoint,
+          metadata: metadata.data,
+          screenshot: capturedData.screenshot,
+          domSnapshot: snapshotValidation.data,
+        });
+
+        if (result.success) {
+          console.log('[Pinpoint] Submitted:', result.id);
+        } else {
+          console.error('[Pinpoint] Submit failed:', result.error);
+        }
+      } catch (error) {
+        console.error('[Pinpoint] Submit error:', error);
+      } finally {
+        setIsSubmitting(false);
+        setSelectedElement(null);
+        setSelectedRect(null);
+        setCapturedData(null);
       }
-
-      const snapshotValidation = validateDOMSnapshot(capturedData.domSnapshot);
-      if (!snapshotValidation.valid) {
-        console.error('[Pinpoint] Invalid snapshot:', snapshotValidation.error);
-        return;
-      }
-
-      const result = await submitFeedback({
-        endpoint: config.endpoint,
-        metadata: metadata.data,
-        screenshot: capturedData.screenshot,
-        domSnapshot: snapshotValidation.data,
-      });
-
-      if (result.success) {
-        console.log('[Pinpoint] Submitted:', result.id);
-      } else {
-        console.error('[Pinpoint] Submit failed:', result.error);
-      }
-    } catch (error) {
-      console.error('[Pinpoint] Submit error:', error);
-    } finally {
-      setIsSubmitting(false);
-      setSelectedElement(null);
-      setSelectedRect(null);
-      setCapturedData(null);
-    }
-  }, [capturedData, config]);
+    },
+    [capturedData, config]
+  );
 
   return (
     <PinpointContext.Provider value={{ isActive, toggle, config }}>
@@ -176,26 +183,47 @@ export function PinpointProvider({
       {isActive && (
         <>
           {isSubmitting && (
-            <div data-pinpoint-overlay="" data-pinpoint-popover="" style={{
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundColor: dark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)', zIndex: 999999,
-              pointerEvents: 'auto',
-            }}>
-              <div style={{
-                backgroundColor: dark ? '#1c1c1e' : '#fff',
-                color: dark ? '#f5f5f7' : '#111827',
-                border: `1px solid ${dark ? '#3a3a3c' : '#e5e7eb'}`,
-                padding: '16px 24px',
-                borderRadius: '8px', fontFamily: 'system-ui, sans-serif',
-                fontSize: '14px',
-                boxShadow: dark ? '0 4px 16px rgba(0,0,0,0.6)' : '0 4px 12px rgba(0,0,0,0.15)',
-              }}>
+            <div
+              data-pinpoint-overlay=""
+              data-pinpoint-popover=""
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: dark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)',
+                zIndex: 999999,
+                pointerEvents: 'auto',
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: dark ? '#1c1c1e' : '#fff',
+                  color: dark ? '#f5f5f7' : '#111827',
+                  border: `1px solid ${dark ? '#3a3a3c' : '#e5e7eb'}`,
+                  padding: '16px 24px',
+                  borderRadius: '8px',
+                  fontFamily: 'system-ui, sans-serif',
+                  fontSize: '14px',
+                  boxShadow: dark ? '0 4px 16px rgba(0,0,0,0.6)' : '0 4px 12px rgba(0,0,0,0.15)',
+                }}
+              >
                 Submitting feedback...
               </div>
             </div>
           )}
-          {!isSubmitting && <HighlightOverlay config={config} onElementSelect={handleElementSelect} selectedElement={selectedElement} selectedRect={selectedRect} />}
+          {!isSubmitting && (
+            <HighlightOverlay
+              config={config}
+              onElementSelect={handleElementSelect}
+              selectedElement={selectedElement}
+              selectedRect={selectedRect}
+            />
+          )}
           {!isSubmitting && selectedElement && selectedRect && (
             <CommentPopover
               anchorRect={selectedRect}
